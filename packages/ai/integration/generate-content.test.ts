@@ -581,4 +581,81 @@ describe('Generate Content', { timeout: 90_000 }, () => {
       });
     });
   });
+
+  describe('Text-to-Speech (TTS)', () => {
+    const ttsModels = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'];
+
+    ttsModels.forEach(ttsModel => {
+      it(`generateContent: single-speaker speech synthesis (${ttsModel})`, async () => {
+        const model = getGenerativeModel(defaultAIInstance, {
+          model: ttsModel,
+          generationConfig: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' }
+              }
+            }
+          }
+        });
+
+        const result = await model.generateContent([
+          {
+            text: 'Welcome to Firebase AI Logic.',
+            speechMetadata: { style: 'cheerful' }
+          }
+        ]);
+
+        const inlineDataParts = result.response.inlineDataParts();
+        expect(inlineDataParts).toBeDefined();
+        expect(inlineDataParts!.length).toBeGreaterThan(0);
+        expect(inlineDataParts![0].inlineData.mimeType).toContain('audio/');
+        expect(inlineDataParts![0].inlineData.data.length).toBeGreaterThan(0);
+      });
+
+      it(`generateContent: multi-speaker speech synthesis (${ttsModel})`, async () => {
+        const model = getGenerativeModel(defaultAIInstance, {
+          model: ttsModel,
+          generationConfig: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              multiSpeakerVoiceConfig: {
+                speakerVoiceConfigs: [
+                  {
+                    speaker: 'Alice',
+                    voiceConfig: {
+                      prebuiltVoiceConfig: { voiceName: 'Kore' }
+                    }
+                  },
+                  {
+                    speaker: 'Bob',
+                    voiceConfig: {
+                      prebuiltVoiceConfig: { voiceName: 'Puck' }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        });
+
+        const result = await model.generateContent([
+          {
+            text: 'Hello Bob!',
+            speechMetadata: { speaker: 'Alice', style: 'friendly' }
+          },
+          {
+            text: 'Hi Alice!',
+            speechMetadata: { speaker: 'Bob', style: 'enthusiastic' }
+          }
+        ]);
+
+        const inlineDataParts = result.response.inlineDataParts();
+        expect(inlineDataParts).toBeDefined();
+        expect(inlineDataParts!.length).toBeGreaterThan(0);
+        expect(inlineDataParts![0].inlineData.mimeType).toContain('audio/');
+        expect(inlineDataParts![0].inlineData.data.length).toBeGreaterThan(0);
+      });
+    });
+  });
 });
